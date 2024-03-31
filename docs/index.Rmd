@@ -1,0 +1,376 @@
+---
+title: "BBoPP Lagering Masterminds Tasting II"
+author: "JRB"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme:
+      bg: "#484848"
+      fg: "#FDF7F7"
+      primary: "#484848"
+      navbar-bg: "#2e4263"
+      base_font:
+        google: Prompt
+      heading_font:
+        google: Sen
+      code_font:
+        google:
+          family: JetBrains Mono
+          local: false
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(shiny)
+library(viridis)
+library(tidyverse)
+library(hrbrthemes)
+library(ggalt)
+library(tm)
+library(wordcloud)
+library(wordcloud2)
+library(rsconnect)
+library(flexdashboard)
+
+bbopp <- 
+  read.csv(
+    "/Users/jrb/Desktop/R/BBoPP_data.csv",
+    row.names = NULL,
+    sep = ","
+  )
+
+bbopp$beer_number <- as.factor(bbopp$beer_number)
+
+p <- bbopp %>%
+  filter(Tasting ==2) %>%
+  group_by(beer_number) %>%
+  add_count(lager_ale, name = "lager_ale_count") %>%
+  add_count(dry_crisp, name = "dry_crisp_count") %>%
+  mutate(mean_lager_ale = mean(lager_ale, na.rm = T), mean_dry_crisp = mean(dry_crisp, na.rm = T))
+```
+
+### BBoPP Lagering Masterminds Second Tasting
+
+On 19 March 2024, nine of us gathered for a second tasting. All six beers submitted were fermented with lager yeasts, and one was fermented outside of the lager temperature guidelines. 
+
+#### Data for Lager-to-Ale scores
+
+```{r, fig.width= 10, fig.height= 6, warning=FALSE, echo=FALSE}
+# lager - to - ale by if fermented outside of temp guidelines
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_lager_ale, color = fermented_outside_temp_guidelines), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#26c6da",
+    "#ab47bc"
+  )) +
+  coord_flip() +
+  scale_y_discrete(name = "Lager                      ->                         Ale", limits =
+                     c("1", "2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Lager           ->          Ale") +
+  xlab("Beer Number") +
+  labs(title = "Lager - to - Ale Spectrum", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more lager-like are on the left, and beers deemed to be more ale-like plot toward the right.\nAll beers rated well within the Lager spectrum. All six beers were fermented with lager yeasts.") +
+  #guides(fill=guide_legend(title="New Legend Title")) +
+  #scale_fill_discrete(name = "New Legend Title") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(
+      colour = "#85C8CD",
+      size = 20,
+      hjust = 0.5
+    ),
+    axis.title.y = element_text(
+      colour = "#85C8CD",
+      size = 12,
+      hjust = 0.5
+    ),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by yeast
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_lager_ale, color = Yeast), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#66bb6a",
+    #"#26a69a",
+    "#26c6da",
+    "#5c6bc0",
+    #"#7e57c2",
+    "#ab47bc"
+  )) +
+  
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Lager                      ->                         Ale", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Lager - Ale Score") +
+  xlab("Beer Number") +
+  labs(title = "Lager - to - Ale") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by reccomended ferment temps
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_lager_ale, color = reccomended_ferment_temps), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#66bb6a",
+    #"#26a69a",
+    "#26c6da",
+    "#5c6bc0",
+    #"#7e57c2",
+    "#ab47bc"
+  )) +
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Lager                      ->                         Ale", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Lager - Ale Score") +
+  xlab("Beer Number") +
+  labs(title = "Lager - to - Ale", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more lager-like are on the left, and beers deemed to be more ale-like plot toward the right.\nAll beers rated well within the Lager spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by ferment temps
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_lager_ale, color = Fermentation_Temp), shape = 15,
+             size = 10) +
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Lager                      ->                         Ale", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Lager - Ale Score") +
+  xlab("Beer Number") +
+  labs(title = "Lager - to - Ale", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more lager-like are on the left, and beers deemed to be more ale-like plot toward the right.\nAll beers rated well within the Lager spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+```
+
+#### Data for Dry-to-Crisp scores
+
+```{r, fig.width= 10, fig.height= 6, warning=FALSE, echo=FALSE}
+####### Distribution of beers on dry - to - crisp spectrum by recommended ferment temps
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_dry_crisp, color = reccomended_ferment_temps), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#66bb6a",
+    #"#26a69a",
+    "#26c6da",
+    "#5c6bc0",
+    #"#7e57c2",
+    "#ab47bc"
+  )) +
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Dry                      ->                         Crisp", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Dry - Crisp Score") +
+  xlab("Beer Number") +
+  labs(title = "Dry - to - Crisp", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more dry are on the left, and beers deemed to be more crisp plot toward the right.\nAll beers rated well within the Dry spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by yeast
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_dry_crisp, color = Yeast), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#66bb6a",
+    #"#26a69a",
+    "#26c6da",
+    "#5c6bc0",
+    #"#7e57c2",
+    "#ab47bc"
+  )) +
+  
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Dry                      ->                         Crisp", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Dry - Crisp Score") +
+  xlab("Beer Number") +
+  labs(title = "Dry - to - Crisp", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more dry are on the left, and beers deemed to be more crisp plot toward the right.\nAll beers rated well within the Dry spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by reccomended ferment temps
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_dry_crisp, color = reccomended_ferment_temps), shape = 15,
+             size = 10) +
+  scale_colour_manual(values = c(
+    "#9ccc65",
+    "#66bb6a",
+    #"#26a69a",
+    "#26c6da",
+    "#5c6bc0",
+    #"#7e57c2",
+    "#ab47bc"
+  )) +
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Dry                      ->                         Crisp", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Dry - Crisp Score") +
+  xlab("Beer Number") +
+  labs(title = "Dry - to - Crisp", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more dry are on the left, and beers deemed to be more crisp plot toward the right.\nAll beers rated well within the Dry spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+
+####### Distribution of beers on lager - to - ale spectrum by ferment temps
+ggplot(p, mapping = aes(x = beer_number)) +
+  geom_point(aes(y = mean_dry_crisp, color = Fermentation_Temp), shape = 15,
+             size = 10) +
+  coord_flip() +
+  scale_fill_manual(name = '', values = 'skyblue') +
+  scale_y_discrete(name ="Dry                      ->                         Crisp", limits=c("1","2", "3", "4", "5", "6")) +
+  theme_ipsum(grid = F, ticks = T) +
+  ylab("Dry - Crisp Score") +
+  xlab("Beer Number") +
+  labs(title = "Dry - to - Crisp", subtitle = "Boxes represent the average vote for each beer number for nine tasters.\nBeers deemed more dry are on the left, and beers deemed to be more crisp plot toward the right.\nAll beers rated well within the Dry spectrum. All six beers were fermented with lager yeasts.") +
+  theme(
+    plot.background = element_rect(fill = "#484848"),
+    axis.text.y = element_text(color = "#85C8CD", size = 20),
+    legend.text = element_text(colour = "#85C8CD", size = 14),
+    legend.position = "right",
+    legend.title = element_text(color = "#85C8CD"),
+    axis.title.x = element_text(colour = "#85C8CD", size = 20, hjust = 0.5),
+    axis.title.y = element_text(colour = "#85C8CD", size = 12, hjust = 0.5),
+    panel.border = element_rect(
+      colour = "#85C8CD",
+      fill = NA,
+      linewidth = 2
+    ),
+    title = element_text(
+      colour = "#85C8CD",
+      size = 16,
+      hjust = 0.5
+    )
+  )
+```
